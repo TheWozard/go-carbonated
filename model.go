@@ -4,58 +4,77 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func NewModel(root Component) Model {
+// NewModel creates a new Model with the given root component and active components.
+func NewModel(root Component, active ...Component) Model {
 	return Model{
-		Active: []Component{},
+		Active: active,
 		Root:   root,
 	}
 }
 
+// Model is the main model for the application. It maintains the current focus and state of the application.
 type Model struct {
+	// Active is a stack of components that are currently active.
+	// The last component in the stack is the current component.
 	Active []Component
-	Root   Component
+	// Root is the main component of the application, this component cannot be removed.
+	Root Component
 
 	// Size is stored in the model so when components are focused they can update their size.
 	Size tea.WindowSizeMsg
 }
 
 func (m Model) Init() tea.Cmd {
-	return FocusCmd
+	// On start we need to focus the current active component.
+	return func() tea.Msg { return FocusMsg{} }
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	m, act := m.PartialUpdate(msg, NewEmptyAction())
-	return act.Act(m)
+	cmd := &Cmd{}
+	return cmd.Act(m.componentUpdate(&Msg{msg: msg}, cmd))
 }
 
-// PartialUpdate is a helper method that allows you to update the model with a message and an action, without
-// committing to the action. This is useful when you want to update the model but still have more actions to collect.
-func (m Model) PartialUpdate(msg tea.Msg, act Cmd) (Model, Cmd) {
-	switch msg := msg.(type) {
+// ComponentUpdate allows the model to be used as a component itself.
+func (m Model) ComponentUpdate(msg *Msg, cmd *Cmd) Component {
+	// Wrap the internal version to match expected types for the interface.
+	return m.componentUpdate(msg, cmd)
+}
+
+// Internal implementation of ComponentUpdate that returns a Model instead of a Component.
+func (m Model) componentUpdate(msg *Msg, cmd *Cmd) Model {
+	switch typed := msg.Get().(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			return m, act.Async(tea.Quit)
-		case "esc":
-			// Set an action, if the current component does not override it, it will be cleared.
-			act = act.Clear()
+		if typed.String() == "ctrl+c" {
+			cmd.Async(tea.Quit)
+			return m
 		}
 	case tea.WindowSizeMsg:
 		// Size is stored in the model so when components are focused they can update their size.
-		m.Size = msg
+		m.Size = typed
 	case FocusMsg:
-		// When we change focus, make sure the new component is focused.
-		m, act = m.PartialUpdate(m.Size, act)
+		// Update focus message with the current size if it is missing or invalid.
+		if typed.Size.Width != m.Size.Width || typed.Size.Height != m.Size.Height {
+			msg = &Msg{msg: FocusMsg{Size: m.Size}}
+		}
 	}
-	var c Component
-	c, act = m.Current().Update(msg, act)
-	return m.Set(c), act
+	c := m.Current().ComponentUpdate(msg, cmd)
+	// If the message was not consumed, see if a default can handle it.
+	switch typed := msg.Get().(type) {
+	case tea.KeyMsg:
+		if typed.String() == "esc" {
+			// We could pop, but we don't know how the stack is being used.
+			cmd.Clear()
+			msg.Consume()
+		}
+	}
+	return m.Set(c)
 }
 
 func (m Model) View() string {
 	return m.Current().View()
 }
 
+// Returns the current component in the stack.
 func (m Model) Current() Component {
 	if len(m.Active) > 0 {
 		return m.Active[len(m.Active)-1]
@@ -63,6 +82,7 @@ func (m Model) Current() Component {
 	return m.Root
 }
 
+// Sets the current active component in the stack.
 func (m Model) Set(c Component) Model {
 	if len(m.Active) > 0 {
 		m.Active[len(m.Active)-1] = c
@@ -72,11 +92,13 @@ func (m Model) Set(c Component) Model {
 	return m
 }
 
+// Clear will clear the current models active stack back to the root.
 func (m Model) Clear() Model {
 	m.Active = []Component{}
 	return m
 }
 
+// Pop will pop the current active component off the stack.
 func (m Model) Pop() Model {
 	if len(m.Active) > 0 {
 		m.Active = m.Active[:len(m.Active)-1]
@@ -84,6 +106,7 @@ func (m Model) Pop() Model {
 	return m
 }
 
+// Push will push a new component onto the active stack.
 func (m Model) Push(c ...Component) Model {
 	m.Active = append(m.Active, c...)
 	return m
