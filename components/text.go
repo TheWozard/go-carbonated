@@ -6,6 +6,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// / NewText creates a new text component.
+func NewText(text string) Text {
+	return Text(text)
+}
+
 // Text is a simple viewable text component.
 type Text string
 
@@ -24,6 +29,7 @@ func (t Text) View() string {
 	return string(t)
 }
 
+// NewStyledText creates a new styled text component.
 func NewStyledText(text string, style lipgloss.Style) StyledText {
 	return StyledText{
 		Text:  text,

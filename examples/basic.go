@@ -11,7 +11,7 @@ import (
 
 func main() {
 	p := tea.NewProgram(carbon.NewModel(
-		components.NewBatch(1,
+		components.NewWrapper(1,
 			components.Text("Rocket Launch Simulation"),
 			carbon.NewModel(
 				components.Text("Blastoff 🚀"),

@@ -7,22 +7,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func NewBatch(input int, contents ...carbon.Component) Batch {
-	return Batch{
+func NewWrapper(input int, contents ...carbon.Component) Wrapper {
+	return Wrapper{
 		Contents: contents,
 		Input:    input,
 	}
 }
 
-// Batch wraps a slice of components into a single component.
+// Wrapper wraps a slice of components into a single component.
 // Only the component at inputs receives input events.
 // All other events are shared.
-type Batch struct {
+type Wrapper struct {
 	Contents []carbon.Component
 	Input    int
 }
 
-func (b Batch) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
+func (b Wrapper) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
 	switch msg.Get().(type) {
 	case tea.KeyMsg:
 		b.Contents[b.Input] = b.Contents[b.Input].ComponentUpdate(msg, cmd)
@@ -34,7 +34,7 @@ func (b Batch) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Componen
 	return b
 }
 
-func (b Batch) View() string {
+func (b Wrapper) View() string {
 	var s strings.Builder
 	for i := range b.Contents {
 		if i > 0 {
