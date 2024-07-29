@@ -1,6 +1,8 @@
 package carbon
 
 import (
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -36,8 +38,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // ComponentUpdate allows the model to be used as a component itself.
 func (m Model) ComponentUpdate(msg *Msg, cmd *Cmd) Component {
-	// Wrap the internal version to match expected types for the interface.
-	return m.componentUpdate(msg, cmd)
+	model, _ := cmd.Act(m.componentUpdate(msg, cmd))
+	cmd.Reset()
+	return model
 }
 
 // Internal implementation of ComponentUpdate that returns a Model instead of a Component.
@@ -45,6 +48,8 @@ func (m Model) componentUpdate(msg *Msg, cmd *Cmd) Model {
 	switch typed := msg.Get().(type) {
 	case tea.KeyMsg:
 		if typed.String() == "ctrl+c" {
+			// To preserve all output, we write a newline before exiting as the terminal may be in a weird state.
+			os.Stdout.WriteString("\n")
 			cmd.Async(tea.Quit)
 			return m
 		}

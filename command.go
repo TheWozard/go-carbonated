@@ -43,3 +43,8 @@ func (a *Cmd) Push(c ...Component) {
 		return m.Push(c...)
 	}
 }
+
+// Reset will reset the current transition.
+func (a *Cmd) Reset() {
+	a.transition = nil
+}

@@ -11,11 +11,18 @@ import (
 
 func main() {
 	p := tea.NewProgram(carbon.NewModel(
-		components.Text("Root"),
-		components.Text("Active 1"),
-		components.Text("Active 2"),
-		components.Text("Active 3"),
-		components.Text("Active 4"),
+		components.NewBatch(1,
+			components.Text("Rocket Launch Simulation"),
+			carbon.NewModel(
+				components.Text("Blastoff 🚀"),
+				components.Text("1"),
+				components.Text("2"),
+				components.Text("3"),
+				components.Text("4"),
+				components.Text("5"),
+				components.Text("Press Space to launch!"),
+			),
+		),
 	))
 
 	if _, err := p.Run(); err != nil {
