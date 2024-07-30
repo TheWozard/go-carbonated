@@ -15,13 +15,6 @@ func NewText(text string) Text {
 type Text string
 
 func (t Text) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
-	if key, ok := msg.Get().(tea.KeyMsg); ok {
-		switch key.String() {
-		case "esc", "backspace", "enter", " ":
-			msg.Consume()
-			cmd.Pop()
-		}
-	}
 	return t
 }
 
@@ -29,36 +22,47 @@ func (t Text) View() string {
 	return string(t)
 }
 
-// NewStyledText creates a new styled text component.
-func NewStyledText(text string, style lipgloss.Style) StyledText {
-	return StyledText{
-		Text:  text,
-		Style: style,
+// NewDynamicText creates a new dynamic text component.
+func NewDynamicText(get func() string) DynamicText {
+	return DynamicText(get)
+}
+
+// DynamicText is a text component that can change its text.
+type DynamicText func() string
+
+func (d DynamicText) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
+	return d
+}
+
+func (d DynamicText) View() string {
+	return d()
+}
+
+// NewStyled creates a new styled wrapping component that styles the wrapped view.
+func NewStyled(contents carbon.Component, style lipgloss.Style) Styled {
+	return Styled{
+		Contents: contents,
+		Style:    style,
 	}
 }
 
-// StyledText is a viewable text component with a style. Automatically resizes to fit the width of the parent component.
-type StyledText struct {
-	Text  string
-	Style lipgloss.Style
+// Styled is a component that wraps another component and applies a style to it.
+type Styled struct {
+	Contents carbon.Component
+	Style    lipgloss.Style
 }
 
-func (t StyledText) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
+func (s Styled) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
 	switch typed := msg.Get().(type) {
-	case tea.KeyMsg:
-		switch typed.String() {
-		case "esc", "backspace", "enter", " ":
-			msg.Consume()
-			cmd.Pop()
-		}
 	case carbon.FocusMsg:
-		t.Style = t.Style.Width(typed.Size.Width)
+		s.Style = s.Style.Width(typed.Size.Width)
 	case tea.WindowSizeMsg:
-		t.Style = t.Style.Width(typed.Width)
+		s.Style = s.Style.Width(typed.Width)
 	}
-	return t
+	s.Contents = s.Contents.ComponentUpdate(msg, cmd)
+	return s
 }
 
-func (t StyledText) View() string {
-	return t.Style.Render(t.Text)
+func (s Styled) View() string {
+	return s.Style.Render(s.Contents.View())
 }

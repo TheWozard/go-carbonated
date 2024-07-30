@@ -66,8 +66,11 @@ func (m Model) componentUpdate(msg *Msg, cmd *Cmd) Model {
 	// If the message was not consumed, see if a default can handle it.
 	switch typed := msg.Get().(type) {
 	case tea.KeyMsg:
-		if typed.String() == "esc" {
-			// We could pop, but we don't know how the stack is being used.
+		switch typed.String() {
+		case "enter", " ":
+			cmd.Pop()
+			msg.Consume()
+		case "esc", "backspace":
 			cmd.Clear()
 			msg.Consume()
 		}
