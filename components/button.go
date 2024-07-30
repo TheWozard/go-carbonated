@@ -23,6 +23,9 @@ func (b Button) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Compone
 		case "enter", " ":
 			msg.Consume()
 			cmd.Push(b.Components...)
+		case "esc", "backspace":
+			msg.Consume()
+			cmd.Pop()
 		}
 	}
 	return b
