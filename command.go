@@ -11,15 +11,22 @@ type Cmd struct {
 	async      []tea.Cmd
 }
 
-// Act will execute the actions against the model and provide any asynchronous commands to be executed.
-func (c *Cmd) Act(m Model) (Model, tea.Cmd) {
+// Update allies the transition and consumes it
+func (c *Cmd) Transition(m Model) Model {
 	if c.transition != nil {
-		// Swap the focus
-		m = m.componentUpdate(&Msg{msg: BlurMsg{}}, c)
 		m = c.transition(m)
-		m = m.componentUpdate(&Msg{msg: FocusMsg{}}, c)
+		c.Reset()
+		return m
 	}
-	return m, tea.Batch(c.async...)
+	return m
+}
+
+// Cmds returns the combined set of commands for the model.
+func (c *Cmd) Cmd() tea.Cmd {
+	if c.async == nil {
+		return nil
+	}
+	return tea.Batch(c.async...)
 }
 
 // Async will append asynchronous commands to the current set.
@@ -27,20 +34,16 @@ func (a *Cmd) Async(cmds ...tea.Cmd) {
 	a.async = append(a.async, cmds...)
 }
 
-// Clear will clear the current models active stack back to the root.
-func (a *Cmd) Clear() {
-	a.transition = Model.Clear
-}
-
-// Pop will pop the current active component off the stack.
-func (a *Cmd) Pop() {
-	a.transition = Model.Pop
-}
-
-// Push will push a new component onto the active stack.
-func (a *Cmd) Push(c ...Component) {
+// Set sets the component to transition to. Ignores passed nils.
+// To clear call Reset.
+func (a *Cmd) Set(active Component) {
+	if active == nil {
+		return
+	}
 	a.transition = func(m Model) Model {
-		return m.Push(c...)
+		m = m.componentUpdate(&Msg{msg: BlurMsg{}}, a)
+		m.Active = active
+		return m.componentUpdate(&Msg{msg: FocusMsg{}}, a)
 	}
 }
 

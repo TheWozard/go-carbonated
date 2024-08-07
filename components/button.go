@@ -5,16 +5,18 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func NewButton(text string, components ...carbon.Component) Button {
-	return Button{
-		Text:       text,
-		Components: components,
+func NewButton(text string, confirm, reject carbon.Component) *Button {
+	return &Button{
+		Text:    text,
+		Confirm: confirm,
+		Reject:  reject,
 	}
 }
 
 type Button struct {
-	Text       string
-	Components []carbon.Component
+	Text    string
+	Confirm carbon.Component
+	Reject  carbon.Component
 }
 
 func (b Button) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
@@ -22,10 +24,10 @@ func (b Button) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Compone
 		switch key.String() {
 		case "enter", " ":
 			msg.Consume()
-			cmd.Push(b.Components...)
+			cmd.Set(b.Confirm)
 		case "esc", "backspace":
 			msg.Consume()
-			cmd.Pop()
+			cmd.Set(b.Reject)
 		}
 	}
 	return b

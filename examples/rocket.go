@@ -25,24 +25,30 @@ func main() {
 	// Shared state should be allocated outside of the model, and pointed to by components that use it.
 	attempts := 0
 	successes := 0
+	root := components.NewButton("Press Space/Enter to launch!", nil, nil)
+	root.Confirm = components.NewChain(
+		components.NewStyled(NewFocusCounter(components.DynamicText(func() string {
+			return fmt.Sprintf("Launch %d!", attempts)
+		}), &attempts), lipgloss.NewStyle().Bold(true)),
+		components.Text("5"),
+		components.Text("4"),
+		components.Text("3"),
+		components.Text("2"),
+		components.Text("1"),
+		components.NewStyled(NewFocusCounter(components.Text("Blastoff 🚀"), &successes), lipgloss.NewStyle().Bold(true)),
+		root,
+	)
+	root.Reject = root
+
 	p := tea.NewProgram(carbon.NewModel(
 		components.NewWrapper(1,
-			components.NewStyled(components.NewDynamicText(func() string {
-				return fmt.Sprintf("Space Launch Simulator - Successes: %d", successes)
-			}), lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))),
-			carbon.NewModel(
-				components.NewButton("Press Space/Enter to launch!",
-					components.NewStyled(NewFocusCounter(components.Text("Blastoff 🚀"), &successes), lipgloss.NewStyle().Bold(true)),
-					components.Text("1"),
-					components.Text("2"),
-					components.Text("3"),
-					components.Text("4"),
-					components.Text("5"),
-					components.NewStyled(NewFocusCounter(components.DynamicText(func() string {
-						return fmt.Sprintf("Launch %d!", attempts)
-					}), &attempts), lipgloss.NewStyle().Bold(true)),
-				),
+			components.NewStyled(
+				components.NewDynamicText(func() string {
+					return fmt.Sprintf("Space Launch Simulator - Successes: %d", successes)
+				}),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA")),
 			),
+			carbon.NewModel(root),
 		),
 	))
 

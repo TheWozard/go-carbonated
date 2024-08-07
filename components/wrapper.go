@@ -7,25 +7,25 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func NewWrapper(input int, contents ...carbon.Component) Wrapper {
+func NewWrapper(index int, contents ...carbon.Component) Wrapper {
 	return Wrapper{
 		Contents: contents,
-		Input:    input,
+		Index:    index,
 	}
 }
 
 // Wrapper wraps a slice of components into a single component.
-// Only the component at inputs receives input events.
+// Only the component at the configured index receives input events.
 // All other events are shared.
 type Wrapper struct {
 	Contents []carbon.Component
-	Input    int
+	Index    int
 }
 
 func (b Wrapper) ComponentUpdate(msg *carbon.Msg, cmd *carbon.Cmd) carbon.Component {
 	switch msg.Get().(type) {
 	case tea.KeyMsg:
-		b.Contents[b.Input] = b.Contents[b.Input].ComponentUpdate(msg, cmd)
+		b.Contents[b.Index] = b.Contents[b.Index].ComponentUpdate(msg, cmd)
 	default:
 		for i := range b.Contents {
 			b.Contents[i] = b.Contents[i].ComponentUpdate(msg, cmd)

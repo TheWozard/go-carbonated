@@ -6,21 +6,15 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// NewModel creates a new Model with the given root component and active components.
-func NewModel(root Component, active ...Component) Model {
-	return Model{
-		Active: active,
-		Root:   root,
-	}
+// NewModel creates a new model with the given active component.
+func NewModel(active Component) Model {
+	return Model{Active: active}
 }
 
-// Model is the main model for the application. It maintains the current focus and state of the application.
+// Model is the main model for the application. It handles focus changes and updates to the current component.
+// Provides default input handling for the application.
 type Model struct {
-	// Active is a stack of components that are currently active.
-	// The last component in the stack is the current component.
-	Active []Component
-	// Root is the main component of the application, this component cannot be removed.
-	Root Component
+	Active Component
 
 	// Size is stored in the model so when components are focused they can update their size.
 	Size tea.WindowSizeMsg
@@ -33,14 +27,12 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmd := &Cmd{}
-	return cmd.Act(m.componentUpdate(&Msg{msg: msg}, cmd))
+	return cmd.Transition(m.componentUpdate(&Msg{msg: msg}, cmd)), cmd.Cmd()
 }
 
 // ComponentUpdate allows the model to be used as a component itself.
 func (m Model) ComponentUpdate(msg *Msg, cmd *Cmd) Component {
-	model, _ := cmd.Act(m.componentUpdate(msg, cmd))
-	cmd.Reset()
-	return model
+	return cmd.Transition(m.componentUpdate(msg, cmd))
 }
 
 // Internal implementation of ComponentUpdate that returns a Model instead of a Component.
@@ -62,60 +54,9 @@ func (m Model) componentUpdate(msg *Msg, cmd *Cmd) Model {
 			msg = &Msg{msg: FocusMsg{Size: m.Size}}
 		}
 	}
-	c := m.Current().ComponentUpdate(msg, cmd)
-	// If the message was not consumed, see if a default can handle it.
-	switch typed := msg.Get().(type) {
-	case tea.KeyMsg:
-		switch typed.String() {
-		case "enter", " ":
-			cmd.Pop()
-			msg.Consume()
-		case "esc", "backspace":
-			cmd.Clear()
-			msg.Consume()
-		}
-	}
-	return m.Set(c)
+	return Model{Active: m.Active.ComponentUpdate(msg, cmd)}
 }
 
 func (m Model) View() string {
-	return m.Current().View()
-}
-
-// Returns the current component in the stack.
-func (m Model) Current() Component {
-	if len(m.Active) > 0 {
-		return m.Active[len(m.Active)-1]
-	}
-	return m.Root
-}
-
-// Sets the current active component in the stack.
-func (m Model) Set(c Component) Model {
-	if len(m.Active) > 0 {
-		m.Active[len(m.Active)-1] = c
-	} else {
-		m.Root = c
-	}
-	return m
-}
-
-// Clear will clear the current models active stack back to the root.
-func (m Model) Clear() Model {
-	m.Active = []Component{}
-	return m
-}
-
-// Pop will pop the current active component off the stack.
-func (m Model) Pop() Model {
-	if len(m.Active) > 0 {
-		m.Active = m.Active[:len(m.Active)-1]
-	}
-	return m
-}
-
-// Push will push a new component onto the active stack.
-func (m Model) Push(c ...Component) Model {
-	m.Active = append(m.Active, c...)
-	return m
+	return m.Active.View()
 }
